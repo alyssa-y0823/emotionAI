@@ -1,0 +1,57 @@
+from transformers import AutoTokenizer, AutoModelForSequenceClassification
+import torch
+
+# 添加設備設定
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+# 已在前面設定 device 變數，這裡無需重複定義
+# 標籤映射字典
+label_mapping = {   # label_mapping[index] = (label, score)
+    # set emotion score from -1 to 1
+    0: ("平淡語氣(Neutral)", 0.0),
+    1: ("關切語調(Concerned)", -0.1),
+    2: ("開心語調(Joy)", 1.0),
+    3: ("憤怒語調(Anger)", -1.0),
+    4: ("悲傷語調(Sadness)", -0.6),
+    5: ("疑問語調(Questioning)", -0.2),
+    6: ("驚奇語調(Surprise)", 0.2),
+    7: ("厭惡語調(Disgust)", -0.7)
+}
+
+def predict_emotion(text, model_path="Johnson8187/Chinese-Emotion"):
+    # 載入模型和分詞器
+    tokenizer = AutoTokenizer.from_pretrained(model_path)
+    model = AutoModelForSequenceClassification.from_pretrained(model_path).to(device)  # 移動模型到設備
+    
+    # 將文本轉換為模型輸入格式
+    inputs = tokenizer(text, return_tensors="pt", truncation=True, padding=True).to(device)  # 移動輸入到設備
+    
+    # 進行預測
+    with torch.no_grad():
+        outputs = model(**inputs)
+    
+    # 取得預測結果
+    predicted_class = torch.argmax(outputs.logits).item() # index
+    predicted_emotion, predicted_score = label_mapping[predicted_class] # label & score
+
+    return predicted_emotion, predicted_score
+
+
+# turn this into an API
+
+from fastapi import FastAPI
+from pydantic import BaseModel  # parse JSON into Python objects
+import uvicorn
+
+app = FastAPI()
+
+class TextInput(BaseModel):
+    text: str  # define the structure of the input data
+
+@app.post("/predict") # API endpoint (URL path), POST request
+async def get_prediction(input: TextInput): # function of API
+    label, score = predict_emotion(input.text)
+    return {"label": label, "score": score}
+
+if __name__ == "__main__":
+    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
+
