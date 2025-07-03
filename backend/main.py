@@ -1,3 +1,8 @@
+# Use a pipeline as a high-level helper
+from transformers import pipeline
+
+pipe = pipeline("text-classification", model="Johnson8187/Chinese-Emotion")
+
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 import torch
 
@@ -41,8 +46,18 @@ def predict_emotion(text, model_path="Johnson8187/Chinese-Emotion"):
 from fastapi import FastAPI
 from pydantic import BaseModel  # parse JSON into Python objects
 import uvicorn
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
+
+# Allow requests from Quasar dev server (localhost:9000)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:9000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 class TextInput(BaseModel):
     text: str  # define the structure of the input data
@@ -54,4 +69,3 @@ async def get_prediction(input: TextInput): # function of API
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
-
