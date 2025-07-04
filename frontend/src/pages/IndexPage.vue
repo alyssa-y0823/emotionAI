@@ -6,6 +6,7 @@
         label="請輸入文字"
         autogrow
         type="textarea"
+        @keydown.enter="evaluateEmotion"
         outlined
       > </q-input>
       <q-btn
@@ -20,7 +21,7 @@
         <p>情緒：{{ messages[messages.length-1].label }}，分數：{{ messages[messages.length-1].score }}</p>
       </div>
     </div>
-    <canvas ref="chartCanvas" style="margin-top: 20px;"></canvas>>
+    <canvas ref="chartCanvas" style="margin-top: 20px;"></canvas>
   </q-page>
 </template>
 
@@ -44,6 +45,7 @@ async function evaluateEmotion() {
   const result = await axios.post("http://localhost:8000/predict", {
     text: userInput
   })
+  console.log('Received from backend:', result.data)
 
   try {
       // add to messages array
@@ -52,6 +54,10 @@ async function evaluateEmotion() {
         label: result.data.label,
         score: result.data.score
       })
+      if (!chartCanvas.value) {
+        console.error('Chart canvas is not available')
+        return
+      }
       updateChart()
       text.value = ''
     } catch (err) {
@@ -60,7 +66,7 @@ async function evaluateEmotion() {
   }
 
   function updateChart() {
-  const labels = messages.value.map((_, i) => `Input ${i + 1}`)
+  const labels = messages.value.map((_, i) => `Message ${i + 1}`)
   const scores = messages.value.map(entry => entry.score)
 
   if (chartInstance) {
@@ -83,8 +89,8 @@ async function evaluateEmotion() {
       scales: {
         y: {
           beginAtZero: false,
-          suggestedMin: -2,
-          suggestedMax: 2,
+          suggestedMin: -1,
+          suggestedMax: 1,
         }
       }
     }
