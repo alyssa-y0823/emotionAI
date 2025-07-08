@@ -1,78 +1,66 @@
-# Use a pipeline as a high-level helper
-from transformers import pipeline
-
-pipe = pipeline("text-classification", model="Johnson8187/Chinese-Emotion")
-
-from transformers import AutoTokenizer, AutoModelForSequenceClassification
-import torch
-
-# 添加設備設定
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-# 已在前面設定 device 變數，這裡無需重複定義
-# 標籤映射字典
-label_mapping = {   # label_mapping[index] = (label, score)
-    # set emotion score from -1 to 1
-    0: ("平淡語氣(Neutral)", 0.0),
-    1: ("關切語調(Concerned)", -0.1),
-    2: ("開心語調(Joy)", 1.0),
-    3: ("憤怒語調(Anger)", -1.0),
-    4: ("悲傷語調(Sadness)", -0.6),
-    5: ("疑問語調(Questioning)", -0.2),
-    6: ("驚奇語調(Surprise)", 0.2),
-    7: ("厭惡語調(Disgust)", -0.7)
-}
-
-def predict_emotion(text, model_path="Johnson8187/Chinese-Emotion"):
-    # 載入模型和分詞器
-    tokenizer = AutoTokenizer.from_pretrained(model_path)
-    model = AutoModelForSequenceClassification.from_pretrained(model_path).to(device)  # 移動模型到設備
-    
-    # 將文本轉換為模型輸入格式
-    inputs = tokenizer(text, return_tensors="pt", truncation=True, padding=True).to(device)  # 移動輸入到設備
-    
-    # 進行預測
-    with torch.no_grad():
-        outputs = model(**inputs)
-    
-    # 取得預測結果
-    predicted_class = torch.argmax(outputs.logits).item() # index
-    predicted_emotion, predicted_score = label_mapping[predicted_class] # label & score
-
-    return predicted_emotion, predicted_score
-
-
-# turn this into an API
-
 from fastapi import FastAPI
-from pydantic import BaseModel  # parse JSON into Python objects
-import uvicorn
-from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from typing import List
+from deep_translator import GoogleTranslator
 
 app = FastAPI()
 
-# Allow requests from Quasar dev server (localhost:9000)
+# CORS
+from fastapi.middleware.cors import CORSMiddleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:9000"],
+    allow_origins=["*"],  # or specify your frontend URL, e.g., ["http://localhost:8080"]
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-if torch.cuda.is_available():
-    device = torch.device("cuda")
-elif torch.backends.mps.is_available():
-    device = torch.device("mps")
-else:
-    device = torch.device("cpu")
+# Define the input model
+class TextRequest(BaseModel):
+    texts: List[str]
 
-class TextInput(BaseModel):
-    text: str  # define the structure of the input data
+# Use a pipeline as a high-level helper
+from transformers import pipeline
+sentiment_analysis = pipeline("text-classification", model="boltuix/bert-emotion")
 
-@app.post("/predict") # API endpoint (URL path), POST request
-async def get_prediction(input: TextInput): # function of API
-    label, score = predict_emotion(input.text)
-    return {"label": label, "score": score}
+# Map emotions to scores
+label_mapping = {
+    "sadness": -0.6,
+    "anger": -1.0,
+    "love": 0.9,
+    "surprise": 0.2,
+    "fear": -0.7,
+    "happiness": 1.0,
+    "neutral": 0.0,
+    "disgust": -0.8,
+    "shame": -0.5,
+    "guilt": -0.4,
+    "confusion": -0.3,
+    "desire": 0.8,
+    "sarcasm": -0.2,
+}
 
-if __name__ == "__main__":
-    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
+@app.post("/analyze")
+async def analyze_emotions(request: TextRequest):
+    original_texts = request.texts
+    translated_texts = [
+        GoogleTranslator(source='zh-TW', target='en').translate(text)
+        for text in original_texts
+    ]
+    
+    results = []
+    for original, translated in zip(original_texts, translated_texts):
+        prediction = sentiment_analysis(translated)[0]
+        emotion = prediction["label"]
+        conf = round(prediction["score"], 4)
+        emotion_score = label_mapping.get(emotion)
+
+        results.append({
+            "original": original,
+            "translated": translated,
+            "emotion": emotion,
+            "confidence": conf,
+            "graph_score": emotion_score
+        })
+
+    return {"results": results}
