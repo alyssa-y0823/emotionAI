@@ -24,6 +24,14 @@
       </div>
     </div>
     <canvas ref="chartCanvas" style="margin-top: 20px;"></canvas>
+    <div>
+      <q-card class="fixed-top-right q-mt-xl" style="width: 300px;">
+        <q-card-section>
+          <div class="text-h6">情緒分數總和</div>
+          <p>blank</p>
+        </q-card-section>
+      </q-card>
+    </div>
   </q-page>
 </template>
 
@@ -62,7 +70,6 @@ async function evaluateEmotion() {
 
     updateChart()
     // updateTotal()
-    // console.log("Total score:", total.value)
     text.value = ''
   } catch (err) {
     console.error('Emotion prediction failed:', err)
@@ -84,8 +91,8 @@ function updateChart() {
       datasets: [{
         label: "情緒值",
         data: scores,
-        borderColor: "rgba(75, 180, 180, 1)",
-        backgroundColor: "rgba(75, 180, 180, 0.2)",
+        // borderColor: "rgba(, 1)",
+        // backgroundColor: "rgba(, 0.2)",
         fill: true
       }]
     },

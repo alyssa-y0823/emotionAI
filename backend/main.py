@@ -1,7 +1,6 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 from typing import List
-from deep_translator import GoogleTranslator
 
 app = FastAPI()
 
@@ -14,6 +13,18 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+import httpx
+def deepl_translate(text: str, api_key: str) -> str:
+    url = "https://api-free.deepl.com/v2/translate"
+    params = {
+        "auth_key": api_key,
+        "text": text,
+        "target_lang": "EN"
+    }
+    response = httpx.post(url, data=params)
+    response.raise_for_status()
+    return response.json()["translations"][0]["text"]
 
 # Define the input model
 class TextRequest(BaseModel):
@@ -40,12 +51,16 @@ label_mapping = {
     "sarcasm": -0.2,
 }
 
+
+import os
+api_key = os.environ.get('DEEPL_APIKEY')
+
 @app.post("/analyze")
 async def analyze_emotions(request: TextRequest):
     original_texts = request.texts
     translated_texts = [
-        GoogleTranslator(source='zh-TW', target='en').translate(text)
-        for text in original_texts
+    deepl_translate(text, api_key)
+    for text in original_texts
     ]
     
     results = []
