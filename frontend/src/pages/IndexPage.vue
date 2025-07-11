@@ -6,7 +6,7 @@
         label="請輸入文字"
         autogrow
         type="textarea"
-        @keydown.enter.prevent="evaluateEmotion"
+        @keypress.enter.prevent="evaluateEmotion"
         outlined
       > </q-input>
       <q-btn
@@ -19,16 +19,16 @@
        <div v-if="messages.length > 0">
         <q-chat-message :text="[messages[messages.length - 1].original]" sent />
         <p>情緒：{{ messages[messages.length - 1].emotion }}，
-          信心度：{{ (messages[messages.length - 1].confidence * 100).toFixed(2) }}%，
+          <!-- 信心度：{{ (messages[messages.length - 1].confidence * 100).toFixed(2) }}%， -->
           分數：{{ messages[messages.length - 1].score }}</p>
       </div>
     </div>
     <canvas ref="chartCanvas" style="margin-top: 20px;"></canvas>
     <div>
-      <q-card class="fixed-top-right q-mt-xl" style="width: 300px;">
+      <q-card class="fixed-top-right q-mt-xl" style="width: 250px;">
         <q-card-section>
-          <div class="text-h6">情緒分數總和</div>
-          <p>blank</p>
+          <div class="text-h6">box</div>
+          <p></p>
         </q-card-section>
       </q-card>
     </div>
@@ -38,7 +38,7 @@
 
 <script setup>
 import { ref } from 'vue'
-import axios from 'axios'
+import { analyzeEmotion } from 'src/api/emotionApi'
 import Chart from 'chart.js/auto'
 
 const text = ref('')
@@ -47,29 +47,27 @@ const messages = ref([]) // stores text, emotion, score
 const chartCanvas = ref(null)
 let chartInstance = null
 
-// let total = ref(0)
-
 async function evaluateEmotion() {
   const userInput = text.value.trim()
   if (!userInput) return
 
   try {
-    const result = await axios.post("http://localhost:8000/analyze", {
-      texts: [userInput]
-    })
+    const res = await analyzeEmotion(userInput)
 
-    const data = result.data.results[0]
+    if (res.error) {
+      console.error(res.message)
+      return
+    }
+
+    const emotionText = res.response?.trim() || '無法判斷'
 
     messages.value.push({
-      original: data.original,
-      translated: data.translated,
-      emotion: data.emotion,
-      confidence: data.confidence,
-      score: data.graph_score
+      original: userInput,
+      emotion: emotionText,
+      score: emotionToScore(emotionText)
     })
 
     updateChart()
-    // updateTotal()
     text.value = ''
   } catch (err) {
     console.error('Emotion prediction failed:', err)
@@ -108,7 +106,21 @@ function updateChart() {
   })
 }
 
-// function updateTotal() {
-//   total.value = messages.value.reduce((sum, entry) => sum + entry.score, 0)
-// }
+function emotionToScore(emotion) {
+  const mapping = {
+    "悲傷語調": -0.8,
+    "憤怒語調": -1.0,
+    "厭惡語調": -0.7,
+    "疑問語調": -0.3,
+    // "恐懼": -0.6,
+    "無法判斷": 0,
+    "平淡語氣": 0.1,
+    // "諷刺": -0.4,
+    "驚奇語調": 0.5,
+    "開心語調": 1.0,
+    "關切語調": 0.3
+  }
+  return mapping[emotion]
+}
+
 </script>
