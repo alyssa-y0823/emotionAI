@@ -21,7 +21,7 @@ export async function analyzeEmotion(userDialogue) {
           "Content-Type": "application/json",
           "X-Function-Name": "test",
           "X-Platform-ID": "123",
-          "Authorization": `Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6IjQxNDkwODJGOTFCOUY0RDNERjkwN0YzNDA4NDhDRENBNTNFOTAzOUIiLCJ4NXQiOiJRVWtJTDVHNTlOUGZrSDgwQ0VqTnlsUHBBNXMiLCJ0eXAiOiJhdCtqd3QifQ.eyJzdWIiOiJjbGllbnQtY3JlZGVudGlhbCIsIm5hbWUiOiJNMk0iLCJyb2xlIjoiU3VwZXJBZG1pbmlzdHJhdG9yIiwib2lfcHJzdCI6ImNsaWVudC1jcmVkZW50aWFsIiwiY2xpZW50X2lkIjoiY2xpZW50LWNyZWRlbnRpYWwiLCJvaV90a25faWQiOiIwOGRkYmY3OS04MzIzLTRmNzQtOGE0Mi1mYmM0NGUzMTFhNDgiLCJzY29wZSI6ImludGVybmFsIiwianRpIjoiMzgxODgyNjQtNDI2My00ZWM0LWFlMzItMDdmYWYzYTcyNDE2IiwiZXhwIjoxNzUyMTMxODc2LCJpc3MiOiJodHRwczovL2Rldi50ZWxsaWdlbnRiaXouY29tL29hdXRoMmFwaS8iLCJpYXQiOjE3NTIxMjgyNzZ9.r3N1LIKv_hxe1a8vM-8j5GYKue3xq1vGEMrqGMwYICO3kzLTpZKfkUgQ-iTxp2EKTgKy4viNS6PCiKt4QJ03jbGltaJuemQih_9Ty3YRxkbclTq8nyynB_q5ahVioKNAiTOm8DSmD7Sut281ooI5Gv8rUrA-egnCfZh9v-Ixz6s--cA6mysdn0sYzVQntP88ktXqx5MaG4NoNkcwxORjyjbQxLndDjTQZp1nUNeG_edUMKdnUG5nsEWeWh_ILA395MBfODzQeeFmrQ8SHBg5__bY4NtbnwjFvGiLNYhhxKVvS4hJKn0GQyA68tM-919Hnbb1wCRTGz4V3YhXL5HINQ`
+          "Authorization": `Bearer `
         }
       }
     )
