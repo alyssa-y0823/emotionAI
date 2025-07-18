@@ -15,10 +15,10 @@ app.add_middleware(
 @app.post("/invoke")
 async def proxy_invoke(request: Request):
     
-    # print("✋ /invoke hit")
+    print("✋ invoke hit")
 
     payload = await request.json()
-    print(payload)
+    print(payload["user_prompt"], payload["model_name"], payload["temperature"])
 
     auth_header = request.headers.get("Authorization")
     headers = {
@@ -34,11 +34,9 @@ async def proxy_invoke(request: Request):
         async with httpx.AsyncClient() as client:
             r = await client.post(
                 "https://dev-nlp.telligentbiz.com/llm/sandbox/invoke",
-                json=payload[0],
+                json=payload,
                 headers=headers
             )
-            print("✅ Response from sandbox:", r.status_code)
-            # print(r.text)
             return r.json()
     except Exception as e:
         print("❌ ERROR inside /invoke:", str(e))

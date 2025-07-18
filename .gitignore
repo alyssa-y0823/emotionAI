@@ -1,0 +1,11 @@
+# local .env files
+.env
+.env*
+
+node_modules/
+*/node_modules/
+
+sandbox_llm_results_1.csv
+sandbox_llm_results.csv
+/llm-proxy/.env
+/backend/.gettoken.py
