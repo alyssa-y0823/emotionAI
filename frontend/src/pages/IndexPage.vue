@@ -6,7 +6,7 @@
         label="請輸入文字"
         autogrow
         type="textarea"
-        @keydown.enter="evaluateEmotion"
+        @keypress.enter.prevent="evaluateEmotion"
         outlined
       > </q-input>
       <q-btn
@@ -18,7 +18,10 @@
       > </q-btn>
        <div v-if="messages.length > 0">
         <q-chat-message :text="[text]" sent />
-        <p>情緒：{{ messages[messages.length-1].label }}，分數：{{ messages[messages.length-1].score }}</p>
+        <p>
+          情緒：{{ messages[messages.length-1].label }}，
+          分數：{{ messages[messages.length-1].score }}，
+        </p>
       </div>
     </div>
     <canvas ref="chartCanvas" style="margin-top: 20px;"></canvas>
@@ -42,6 +45,7 @@ async function evaluateEmotion() {
   const userInput = text.value.trim()
   if(!userInput)
     return
+
   const result = await axios.post("http://localhost:8000/predict", {
     text: userInput
   })
@@ -52,7 +56,7 @@ async function evaluateEmotion() {
       messages.value.push({
         text: userInput,
         label: result.data.label,
-        score: result.data.score
+        score: result.data.score,
       })
       if (!chartCanvas.value) {
         console.error('Chart canvas is not available')

@@ -12,14 +12,14 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # 標籤映射字典
 label_mapping = {   # label_mapping[index] = (label, score)
     # set emotion score from -1 to 1
-    0: ("平淡語氣(Neutral)", 0.0),
-    1: ("關切語調(Concerned)", -0.1),
-    2: ("開心語調(Joy)", 1.0),
-    3: ("憤怒語調(Anger)", -1.0),
-    4: ("悲傷語調(Sadness)", -0.6),
-    5: ("疑問語調(Questioning)", -0.2),
-    6: ("驚奇語調(Surprise)", 0.2),
-    7: ("厭惡語調(Disgust)", -0.7)
+    0: ("平淡語氣", 0.0),
+    1: ("關切語調", 0.3),
+    2: ("開心語調", 1.0),
+    3: ("憤怒語調", -1.0),
+    4: ("悲傷語調", -0.8),
+    5: ("疑問語調", -0.3),
+    6: ("驚奇語調", 0.5),
+    7: ("厭惡語調", -0.7)
 }
 
 def predict_emotion(text, model_path="Johnson8187/Chinese-Emotion"):
