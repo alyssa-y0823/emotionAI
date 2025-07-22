@@ -10,4 +10,3 @@ sandbox_llm_results.csv
 /llm-proxy/.env
 /backend/.gettoken.py
 /llm-proxy/requirements.txt
-frontend/src/api/emotionApi.js
