@@ -16,11 +16,15 @@
         class="q-mt-sm"
         @click="evaluateEmotion"
       > </q-btn>
-       <div v-if="messages.length > 0">
+      <div v-if="loading" class="row justify-center q-mt-md">
+        <q-spinner-dots color="primary" size="40px" />
+        <span class="q-ml-md q-pt-sm">分析中...</span>
+      </div>
+      <div v-if="messages.length > 0">
         <q-chat-message :text="[text]" sent />
         <p>
           情緒：{{ messages[messages.length-1].label }}，
-          分數：{{ messages[messages.length-1].score }}，
+          分數：{{ messages[messages.length-1].score }}
         </p>
       </div>
     </div>
@@ -40,17 +44,19 @@ const messages = ref([]) // stores text, label, score
 
 const chartCanvas = ref(null)
 let chartInstance = null
+const loading = ref(false)
 
 async function evaluateEmotion() {
   const userInput = text.value.trim()
   if(!userInput)
     return
-
+  loading.value = true
+  // start = TimeRanges.time()
   const result = await axios.post("http://localhost:8000/predict", {
     text: userInput
   })
   console.log('Received from backend:', result.data)
-
+  // elapsed = TimeRanges.time() - start
   try {
       // add to messages array
       messages.value.push({
@@ -66,6 +72,8 @@ async function evaluateEmotion() {
       text.value = ''
     } catch (err) {
       console.error('Emotion prediction failed:', err)
+    } finally {
+      loading.value = false
     }
   }
 

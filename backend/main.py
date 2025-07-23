@@ -10,8 +10,7 @@ import torch
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # 已在前面設定 device 變數，這裡無需重複定義
 # 標籤映射字典
-label_mapping = {   # label_mapping[index] = (label, score)
-    # set emotion score from -1 to 1
+label_mapping = {
     0: ("平淡語氣", 0.0),
     1: ("關切語調", 0.3),
     2: ("開心語調", 1.0),

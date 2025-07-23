@@ -28,7 +28,7 @@ import os
 load_dotenv()  # Loads variables from .env into environment
 AUTH_TOKEN = os.getenv("AUTH_TOKEN")
 
-for row_num, (i, row) in enumerate(df.sample(n=1000).iterrows(), 1):
+for row_num, (i, row) in enumerate(df.sample(n=10).iterrows(), 1):
     print(f"Processing row {row_num}: {row['text']}\t語氣：{row['emotion']}")  
     text = row['text']
     emotion = row['emotion']
@@ -45,14 +45,14 @@ for row_num, (i, row) in enumerate(df.sample(n=1000).iterrows(), 1):
             "Content-Type": "application/json",
             "X-Function-Name": "batch-test",
             "X-Platform-ID": "123",
-            "Authorization": AUTH_TOKEN,
+            "Authorization": f"Bearer {AUTH_TOKEN}",
         }
 
         try:
             start_time = time.time()
             response = requests.post(API_URL, headers=headers, json=payload)
             elapsed_time = time.time() - start_time
-            print(f"Raw response from {model_key}: {response.text}, time: {elapsed_time}") # request sent
+            print(f"\t{model_key}: {response.text}, time: {elapsed_time:.3f}s") # request sent
             times[model_key].append(elapsed_time)  # store time taken for each model
             if response.status_code == 200:
                 res_json = response.json()
@@ -80,4 +80,4 @@ for model_key in MODELS:
     error_rate = is_error.mean()
     avg_time = sum(times[model_key]) / len(times[model_key]) if times[model_key] else 0
     print(f"{model_key} accuracy: {acc:.2%}, error rate: {error_rate:.2%}")
-    print(f"\taverage time: {avg_time:.3f}s, 95th percentile: {pd.Series(times[model_key]).quantile(0.95):.3f}s, 90th percentile: {pd.Series(times[model_key]).quantile(0.90):.3f}s")
+    print(f"\taverage time: {avg_time:.3f}s, 95th percentile: {pd.Series(times[model_key]).quantile(0.95):.3f}s, 90th percentile: {pd.Series(times[model_key]).quantile(0.90):.3f}s, min time: {min(times[model_key]):.3f}s, max time: {max(times[model_key]):.3f}s")

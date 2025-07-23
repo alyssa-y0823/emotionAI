@@ -1,7 +1,7 @@
-
 import axios from 'axios'
-
 const SANDBOX_URL = "http://127.0.0.1:8010/invoke";
+
+const AUTH_TOKEN = import.meta.env.VITE_AUTH_TOKEN
 
 export async function analyzeEmotion(userDialogue) {
   try {
@@ -10,7 +10,7 @@ export async function analyzeEmotion(userDialogue) {
       {
         instance_id: "111",
         developer_prompt:
-          "請逐句分析客戶語氣，從以下情緒中選擇一項回覆：「悲傷語調」、「憤怒語調」、「驚奇語調」、「關切語調」、「開心語調」、「平淡語氣」、「疑問語調」、「厭惡語調」、「無法判斷」。請以每行一句的格式輸出。",
+          "請逐句分析以下句子的語氣，從以下情緒中選擇一項回覆：「悲傷語調」、「憤怒語調」、「驚奇語調」、「關切語調」、「開心語調」、「平淡語氣」、「疑問語調」、「厭惡語調」、「無法判斷」。請以每行一句的格式輸出。",
         user_prompt: userDialogue,
         model_name: "gemini-2.5-flash",
         temperature: 0.6,
