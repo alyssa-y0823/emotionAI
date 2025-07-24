@@ -11,5 +11,5 @@ sandbox_llm_results.csv
 /backend/.gettoken.py
 /llm-proxy/requirements.txt
 /backend/timeout_sent.json
-chinese_emotion_results.csv
-gemini_results.csv
+chinese_emotion_results*.csv
+gemini_results*.csv

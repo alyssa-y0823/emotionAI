@@ -4,10 +4,10 @@ import pandas as pd
 # load .env variable
 from dotenv import load_dotenv
 load_dotenv()
-AUTH_TOKEN = os.getenv("AUTH_TOKEN")
+AUTH_TOKEN = os.getenv("VITE_AUTH_TOKEN")
 
 # read sentences.json
-with open("timeout_sent.json", "r") as f:
+with open("sentences.json", "r") as f:
     data = json.load(f)
 
 API_URL = "http://127.0.0.1:8010/invoke"
@@ -36,7 +36,7 @@ for character in data:
                 "Content-Type": "application/json",
                 "X-Function-Name": "batch-test2",
                 "X-Platform-ID": "456",
-                "Authorization": AUTH_TOKEN,
+                "Authorization": f"Bearer {AUTH_TOKEN}"
             }
 
             try:

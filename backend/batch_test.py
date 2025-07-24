@@ -26,9 +26,9 @@ from dotenv import load_dotenv
 import os
 
 load_dotenv()  # Loads variables from .env into environment
-AUTH_TOKEN = os.getenv("AUTH_TOKEN")
+AUTH_TOKEN = os.getenv("VITE_AUTH_TOKEN")
 
-for row_num, (i, row) in enumerate(df.sample(n=10).iterrows(), 1):
+for row_num, (i, row) in enumerate(df.sample(n=1000).iterrows(), 1):
     print(f"Processing row {row_num}: {row['text']}\t語氣：{row['emotion']}")  
     text = row['text']
     emotion = row['emotion']

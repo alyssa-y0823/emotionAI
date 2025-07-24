@@ -21,7 +21,7 @@ async def proxy_invoke(request: Request):
     print(payload["user_prompt"], payload["model_name"])
 
     auth_header = request.headers.get("Authorization")
-    print("Received Authorization header from frontend:", auth_header)
+    # print("Received Authorization header from frontend:", auth_header)
     headers = {
         "Content-Type": "application/json",
         "X-Function-Name": request.headers.get("x-function-name", "frontend-proxy"),

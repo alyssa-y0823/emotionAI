@@ -11,7 +11,7 @@ export async function analyzeEmotion(userDialogue) {
       {
         instance_id: "111",
         developer_prompt:
-          "請逐句分析以下句子的語氣，從以下情緒中選擇一項回覆：「悲傷語調」、「憤怒語調」、「驚奇語調」、「關切語調」、「開心語調」、「平淡語氣」、「疑問語調」、「厭惡語調」、「無法判斷」。請以每行一句的格式輸出，例：憤努語調",
+          "請只針對整段輸入判斷一次語氣，從以下情緒中選擇最貼近的一項回覆：「悲傷語調」、「憤怒語調」、「驚奇語調」、「關切語調」、「開心語調」、「平淡語氣」、「疑問語調」、「厭惡語調」、「無法判斷」。請只輸出情緒詞，勿重複、勿補充說明。",
         user_prompt: userDialogue,
         model_name: "gemini-2.5-flash",
         temperature: 0.6,
