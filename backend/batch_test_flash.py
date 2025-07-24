@@ -36,7 +36,7 @@ for character in data:
                 "Content-Type": "application/json",
                 "X-Function-Name": "batch-test2",
                 "X-Platform-ID": "456",
-                "Authorization": f"Bearer {AUTH_TOKEN}",
+                "Authorization": AUTH_TOKEN,
             }
 
             try:
