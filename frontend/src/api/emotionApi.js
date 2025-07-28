@@ -2,37 +2,70 @@ import axios from 'axios'
 const SANDBOX_URL = "http://127.0.0.1:8010/invoke";
 
 const AUTH_TOKEN = import.meta.env.VITE_AUTH_TOKEN
+import { emotionPrompt, tensionPrompt } from 'src/api/prompts.js'
 
-export async function analyzeEmotion(userDialogue) {
+export async function analyzeEmotionAndTension(userDialogue) {
   try {
-    console.log("AUTH_TOKEN:", AUTH_TOKEN)
-    const response = await axios.post(
-      SANDBOX_URL,
+    // first api call
+    const emotionResponse = await axios.post(SANDBOX_URL,
       {
         instance_id: "111",
-        developer_prompt:
-          "請只針對整段輸入判斷一次語氣，從以下情緒中選擇最貼近的一項回覆：「悲傷語調」、「憤怒語調」、「驚奇語調」、「關切語調」、「開心語調」、「平淡語氣」、「疑問語調」、「厭惡語調」、「無法判斷」。請只輸出情緒詞，勿重複、勿補充說明。",
+        developer_prompt: emotionPrompt,
         user_prompt: userDialogue,
         model_name: "gemini-2.5-flash",
         temperature: 0.6,
-        // history_steps: "all"
+        history_steps: 15
       },
       {
         headers: {
           "Content-Type": "application/json",
-          "X-Function-Name": "test",
+          "X-Function-Name": "emotion-classify",
           "X-Platform-ID": "123",
           "Authorization": `Bearer ${AUTH_TOKEN}`
         }
       }
     )
 
-    return response.data // response.response is the LLM's output
+    // second api call
+    const tensionResponse = await axios.post(SANDBOX_URL,
+      {
+        instance_id: "111",
+        developer_prompt: tensionPrompt,
+        user_prompt: userDialogue,
+        model_name: "gemini-2.5-flash",
+        temperature: 0.3, // lower temp
+        history_steps: 15
+      },
+      {
+        headers: {
+          "Content-Type": "application/json",
+          "X-Function-Name": "tension-measure",
+          "X-Platform-ID": "123",
+          "Authorization": `Bearer ${AUTH_TOKEN}`
+        }
+      }
+    )
+
+    console.log('Emotion Response:', emotionResponse.data)
+    console.log('Tension Response:', tensionResponse.data)
+
+    return {
+      emotion: emotionResponse.data,
+      tension: tensionResponse.data,
+      combined: {
+        emotion_result: emotionResponse.data.response,
+        tension_result: tensionResponse.data.response,
+        timestamp: new Date().toISOString()
+      }
+    }
   } catch (error) {
     console.error("Error calling LLM sandbox:", error)
-    return {
-      error: true,
-      message: error.response?.data?.detail || error.message
-    }
+    throw new Error(error.response?.data?.detail || error.message || '網路錯誤')
   }
+}
+
+// Legacy function for backward compatibility
+export async function analyzeEmotion(userDialogue) {
+  const result = await analyzeEmotionAndTension(userDialogue)
+  return result.emotion
 }
