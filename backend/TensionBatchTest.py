@@ -62,8 +62,8 @@ with open("sentences.json", "r", encoding='utf-8') as f:
 
 # Configuration
 API_URL = "http://127.0.0.1:8010/invoke"
-MODEL = "gpt-4o"
-OUTPUT_FILE = "gpt_tension_results.csv"
+MODEL = "gpt-4.1"
+OUTPUT_FILE = "4.1_tension_results.csv"
 
 def make_api_call(prompt, user_input, function_name, temperature=0.6):
     """Make a single API call and return the result"""
@@ -356,29 +356,8 @@ axes[0, 1].axvline(api_series.mean(), color='red', linestyle='--',
                    label=f'Mean: {api_series.mean():.3f}s')
 axes[0, 1].legend()
 
-# Emotion Distribution
-if len(valid_emotions) > 0:
-    emotion_counts = valid_emotions['true_emotion'].value_counts()
-    axes[1, 0].bar(range(len(emotion_counts)), emotion_counts.values, color='coral')
-    axes[1, 0].set_title('Distribution of True Emotions')
-    axes[1, 0].set_xlabel('Emotion')
-    axes[1, 0].set_ylabel('Count')
-    axes[1, 0].set_xticks(range(len(emotion_counts)))
-    axes[1, 0].set_xticklabels(emotion_counts.index, rotation=45, ha='right')
-
-# Accuracy by Emotion
-if len(valid_emotions) > 0 and 'emotion_stats' in locals():
-    axes[1, 1].bar(range(len(emotion_stats)), emotion_stats['accuracy_pct'], color='gold')
-    axes[1, 1].set_title('Accuracy by Emotion (Combined API)')
-    axes[1, 1].set_xlabel('Emotion')
-    axes[1, 1].set_ylabel('Accuracy (%)')
-    axes[1, 1].set_xticks(range(len(emotion_stats)))
-    axes[1, 1].set_xticklabels(emotion_stats.index, rotation=45, ha='right')
-    axes[1, 1].set_ylim(0, 100)
-
 plt.tight_layout()
 plt.savefig('combined_single_api_analysis.png', dpi=300, bbox_inches='tight')
 plt.show()
 
 print(f"\nVisualization saved as: combined_single_api_analysis.png")
-print("Combined single API analysis complete!")

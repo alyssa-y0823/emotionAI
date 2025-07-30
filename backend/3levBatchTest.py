@@ -62,8 +62,8 @@ with open("sentences.json", "r", encoding='utf-8') as f:
 
 # Configuration
 API_URL = "http://127.0.0.1:8010/invoke"
-MODEL = "gpt-4o"
-OUTPUT_FILE = "gpt_3lev_results.csv"
+MODEL = "gpt-4.1"
+OUTPUT_FILE = "4.1_3lev_results.csv"
 
 def make_api_call(prompt, user_input, function_name, temperature=0.6):
     """Make a single API call and return the result"""

@@ -208,12 +208,11 @@ function parseTensionResponse(response) {
     const match = response.match(pattern)
     if (match) {
       if (key === 'tension') {
-        result[key] = parseFloat(match[1])
+        let parsed = parseFloat(match[1])
+        result[key] = parsed < 0.1 ? 0.1 : parsed
       } else {
         result[key] = parseInt(match[1])
       }
-    } else {
-      result[key] = 'ERROR'
     }
   }
   

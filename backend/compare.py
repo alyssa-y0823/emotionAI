@@ -1,9 +1,9 @@
 import pandas as pd
 
 # read CSV files
-raw_df = pd.read_csv("gpt_tension_results.csv", usecols=["true_emotion", "sentence", "predicted_emotion", "tension_score"])
-df2 = pd.read_csv("gpt_0to1_results.csv", usecols=["predicted_emotion", "predicted_score"])
-df3 = pd.read_csv("gpt_3lev_results.csv", usecols=["predicted_emotion", "intensity_level"])
+raw_df = pd.read_csv("4.1_tension_results.csv", usecols=["true_emotion", "sentence", "predicted_emotion", "tension_score"])
+df2 = pd.read_csv("4.1_0to1_results.csv", usecols=["predicted_emotion", "predicted_score"])
+df3 = pd.read_csv("4.1_3lev_results.csv", usecols=["predicted_emotion", "intensity_level"])
 
 df = pd.concat([raw_df, df2, df3], axis=1)
 

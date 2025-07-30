@@ -28,9 +28,9 @@ with open("sentences.json", "r", encoding='utf-8') as f:
 
 # Configuration
 API_URL = "http://127.0.0.1:8010/invoke"
-MODEL = "gpt-4o"
+MODEL = "gpt-4.1"
 DEV_PROMPT = prompt
-OUTPUT_FILE = "gpt_0to1_results.csv"
+OUTPUT_FILE = "4.1_0to1_results.csv"
 
 # Function to extract emotion and score from output format
 def extract_emotion_and_score(prediction_text):
