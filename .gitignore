@@ -5,11 +5,5 @@
 node_modules/
 */node_modules/
 
-sandbox_llm_results_1.csv
-sandbox_llm_results.csv
-/llm-proxy/.env
-/backend/.gettoken.py
+/backend/.get_token.py
 /llm-proxy/requirements.txt
-/backend/timeout_sent.json
-chinese_emotion_results*.csv
-gemini_results*.csv

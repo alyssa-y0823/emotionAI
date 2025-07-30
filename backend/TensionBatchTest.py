@@ -11,15 +11,14 @@ load_dotenv()
 AUTH_TOKEN = os.getenv("VITE_AUTH_TOKEN")
 
 # Validate required files and environment
-required_files = ['emotion_prompt.txt', 'tension_prompt.txt', 'sentences.json']
+required_files = ['sentences.json']
 for file in required_files:
     if not os.path.exists(file):
-        print(f"Warning: Required file '{file}' not found")
+        print(f"File '{file}' not found")
 
 if not AUTH_TOKEN:
-    raise ValueError("VITE_AUTH_TOKEN not found in environment variables")
+    raise ValueError("VITE_AUTH_TOKEN not found")
 
-# Load prompts
 def load_prompt(filename, default_content=""):
     try:
         with open(filename, 'r', encoding='utf-8') as f:
@@ -27,23 +26,13 @@ def load_prompt(filename, default_content=""):
     except FileNotFoundError:
         return default_content
 
-# Default prompts if files don't exist
-EMOTION_PROMPT_DEFAULT = """
-你是一個中文情緒分類系統，請對使用者輸入的句子進行情緒分類。
+COMBINED_PROMPT_DEFAULT = """
+你是一個中文語言分析系統，請對使用者輸入的句子同時進行情緒分類和 tension 計算。
 
-任務：情緒分類  
+任務1：情緒分類  
 請判斷此句最符合下列哪一種情緒（只能選一個）：憤怒、期待、厭惡、恐懼、喜悅、悲傷、驚奇、信任。
 
-輸出格式：
-情緒：<情緒標籤>
-
-請勿補充說明，直接輸出結果。
-"""
-
-TENSION_PROMPT_DEFAULT = """
-你是一個中文語言張力(Tension)計算系統，請對使用者輸入的句子計算其語言張力值。
-
-任務：Tension 計算  
+任務2：Tension 計算  
 請根據以下公式與定義計算此句的 Tension 值：
 
 Tension = ( Modifier + Idiom + 2 × DegreeHead ) ÷ WordCount
@@ -55,17 +44,17 @@ Tension = ( Modifier + Idiom + 2 × DegreeHead ) ÷ WordCount
 - WordCount：句子的詞彙總數（不含標點符號）
 
 輸出格式：
+情緒：<情緒標籤>
 Modifier：<數值>
 Idiom：<數值>
 DegreeHead：<數值>
 WordCount：<數值>  
-Tension：<結果數值，四捨五入到小數點後兩位>
+Tension：<結果數值，小數點後兩位>
 
 請勿補充說明，直接輸出結果。
 """
 
-emotion_prompt = load_prompt('emotion_prompt.txt', EMOTION_PROMPT_DEFAULT)
-tension_prompt = load_prompt('tension_prompt.txt', TENSION_PROMPT_DEFAULT)
+combined_prompt = load_prompt('combined_prompt.txt', COMBINED_PROMPT_DEFAULT)
 
 # Load test data
 with open("sentences.json", "r", encoding='utf-8') as f:
@@ -73,13 +62,13 @@ with open("sentences.json", "r", encoding='utf-8') as f:
 
 # Configuration
 API_URL = "http://127.0.0.1:8010/invoke"
-MODEL = "gemini-2.5-flash"
-OUTPUT_FILE = "dual_backend_batch_results.csv"
+MODEL = "gpt-4o"
+OUTPUT_FILE = "gpt_tension_results.csv"
 
 def make_api_call(prompt, user_input, function_name, temperature=0.6):
     """Make a single API call and return the result"""
     payload = {
-        "instance_id": "111",
+        "instance_id": "222",
         "developer_prompt": prompt,
         "user_prompt": user_input,
         "model_name": MODEL,
@@ -89,7 +78,7 @@ def make_api_call(prompt, user_input, function_name, temperature=0.6):
     headers = {
         "Content-Type": "application/json",
         "X-Function-Name": function_name,
-        "X-Platform-ID": "456",
+        "X-Platform-ID": "222",
         "Authorization": f"Bearer {AUTH_TOKEN}"
     }
     
@@ -111,33 +100,33 @@ def make_api_call(prompt, user_input, function_name, temperature=0.6):
     except Exception as e:
         return f"ERROR: {str(e)}", 0, "ERROR"
 
-def parse_emotion_response(response):
-    """Extract emotion from response"""
+def parse_combined_response(response):
+    """Extract both emotion and tension metrics from combined response"""
+    result = {
+        "emotion": "PARSE_ERROR",
+        "modifier": "ERROR",
+        "idiom": "ERROR",
+        "degree_head": "ERROR",
+        "word_count": "ERROR",
+        "tension": "ERROR"
+    }
+    
     if "ERROR" in str(response):
-        return "ERROR"
+        return result
     
-    # Look for pattern: 情緒：<emotion>
-    match = re.search(r'情緒[：:]\s*([^：:\n\r]+)', response)
-    if match:
-        return match.group(1).strip()
+    # Parse emotion
+    emotion_match = re.search(r'情緒[：:]\s*([^：:\n\r]+)', response)
+    if emotion_match:
+        result["emotion"] = emotion_match.group(1).strip()
+    else:
+        # Fallback: look for known emotions
+        emotions = ['憤怒', '期待', '厭惡', '恐懼', '喜悅', '悲傷', '驚奇', '信任']
+        for emotion in emotions:
+            if emotion in response:
+                result["emotion"] = emotion
+                break
     
-    # Fallback: look for known emotions
-    emotions = ['憤怒', '期待', '厭惡', '恐懼', '喜悅', '悲傷', '驚奇', '信任']
-    for emotion in emotions:
-        if emotion in response:
-            return emotion
-    
-    return "PARSE_ERROR"
-
-def parse_tension_response(response):
-    """Extract tension metrics from response"""
-    if "ERROR" in str(response):
-        return {"modifier": "ERROR", "idiom": "ERROR", "degree_head": "ERROR", 
-                "word_count": "ERROR", "tension": "ERROR"}
-    
-    result = {}
-    
-    # Parse each component
+    # Parse tension components
     patterns = {
         'modifier': r'Modifier[：:]\s*(\d+)',
         'idiom': r'Idiom[：:]\s*(\d+)', 
@@ -150,9 +139,15 @@ def parse_tension_response(response):
         match = re.search(pattern, response)
         if match:
             if key == 'tension':
-                result[key] = float(match.group(1))
+                try:
+                    result[key] = float(match.group(1))
+                except ValueError:
+                    result[key] = "PARSE_ERROR"
             else:
-                result[key] = int(match.group(1))
+                try:
+                    result[key] = int(match.group(1))
+                except ValueError:
+                    result[key] = "PARSE_ERROR"
         else:
             result[key] = "PARSE_ERROR"
     
@@ -160,8 +155,7 @@ def parse_tension_response(response):
 
 # Initialize tracking variables
 results = []
-emotion_times = []
-tension_times = []
+api_times = []
 tension_scores = []  # Store all tension scores for histogram
 emotion_error_count = 0
 tension_error_count = 0
@@ -170,8 +164,8 @@ tension_error_count = 0
 total_requests_count = sum(len(sent["emotion_sentences"]) for char in data for sent in char["sentences"])
 current_request = 0
 
-print(f"Starting backend dual API batch processing of {total_requests_count} sentences...")
-print("Each sentence will make 2 separate API calls: Emotion Classification + Tension Measurement")
+print(f"Starting combined single API batch processing of {total_requests_count} sentences...")
+print("Each sentence will make 1 API call for both: Emotion Classification + Tension Measurement")
 print("=" * 80)
 
 for character in data:
@@ -188,54 +182,39 @@ for character in data:
             print(f"  [{current_request}/{total_requests_count}] ({progress:.1f}%)")
             print(f"  Input: {sent[:80]}{'...' if len(sent) > 80 else ''}")
             
-            # API Call 1: Emotion Classification
-            emotion_result, emotion_time, emotion_status = make_api_call(
-                emotion_prompt, sent, "emotion-classify", temperature=0.6
+            # Single Combined API Call
+            combined_result, api_time, api_status = make_api_call(
+                combined_prompt, sent, "emotion-tension-analyze", temperature=0.6
             )
-            emotion_times.append(emotion_time)
-            parsed_emotion = parse_emotion_response(emotion_result)
+            api_times.append(api_time)
+            parsed_result = parse_combined_response(combined_result)
             
-            if "ERROR" in parsed_emotion:
+            # Track errors
+            if "ERROR" in parsed_result["emotion"] or "PARSE_ERROR" in parsed_result["emotion"]:
                 emotion_error_count += 1
             
-            print(f"  Emotion API: {emotion_time:.3f}s | Status: {emotion_status} | Result: {parsed_emotion}")
-            
-            # Small delay between calls
-            time.sleep(0.5)
-            
-            # API Call 2: Tension Measurement  
-            tension_result, tension_time, tension_status = make_api_call(
-                tension_prompt, sent, "tension-measure", temperature=0.3
-            )
-            tension_times.append(tension_time)
-            parsed_tension = parse_tension_response(tension_result)
-            
-            # Store tension score for histogram if valid
-            if isinstance(parsed_tension.get('tension'), (int, float)):
-                tension_scores.append(parsed_tension['tension'])
+            if isinstance(parsed_result.get('tension'), (int, float)):
+                tension_scores.append(parsed_result['tension'])
             else:
                 tension_error_count += 1
             
-            print(f"  Tension API: {tension_time:.3f}s | Status: {tension_status} | Score: {parsed_tension.get('tension', 'ERROR')}")
+            print(f"  API Call: {api_time:.3f}s | Status: {api_status}")
+            print(f"  Emotion: {parsed_result['emotion']} | Tension: {parsed_result.get('tension', 'ERROR')}")
             
             # Store results
             result_row = {
                 "character": character_info,
                 "true_emotion": label,
                 "sentence": sent,
-                "predicted_emotion": parsed_emotion,
-                "emotion_raw_response": emotion_result,
-                "emotion_time": emotion_time,
-                "emotion_status": emotion_status,
-                "tension_modifier": parsed_tension.get('modifier', 'ERROR'),
-                "tension_idiom": parsed_tension.get('idiom', 'ERROR'), 
-                "tension_degree_head": parsed_tension.get('degree_head', 'ERROR'),
-                "tension_word_count": parsed_tension.get('word_count', 'ERROR'),
-                "tension_score": parsed_tension.get('tension', 'ERROR'),
-                "tension_raw_response": tension_result,
-                "tension_time": tension_time,
-                "tension_status": tension_status,
-                "total_time": emotion_time + tension_time
+                "predicted_emotion": parsed_result["emotion"],
+                "tension_modifier": parsed_result.get('modifier', 'ERROR'),
+                "tension_idiom": parsed_result.get('idiom', 'ERROR'), 
+                "tension_degree_head": parsed_result.get('degree_head', 'ERROR'),
+                "tension_word_count": parsed_result.get('word_count', 'ERROR'),
+                "tension_score": parsed_result.get('tension', 'ERROR'),
+                "raw_response": combined_result,
+                "api_time": api_time,
+                "api_status": api_status
             }
             
             results.append(result_row)
@@ -244,7 +223,7 @@ for character in data:
             time.sleep(1)
 
 print("\n" + "=" * 80)
-print("BACKEND DUAL API PROCESSING COMPLETE")
+print("COMBINED SINGLE API PROCESSING COMPLETE")
 print("=" * 80)
 
 # Save results to CSV
@@ -253,31 +232,21 @@ df.to_csv(OUTPUT_FILE, index=False, encoding='utf-8')
 print(f"\nResults saved to: {OUTPUT_FILE}")
 
 # Performance Statistics
-all_times = emotion_times + tension_times
-total_time = sum(df['total_time'])
+total_time = sum(df['api_time'])
 
 print(f"\n=== Performance Summary ===")
 print(f"Total Sentences Processed: {len(results)}")
-print(f"Total API Calls Made: {len(results) * 2}")
+print(f"Total API Calls Made: {len(results)} (50% reduction from dual API approach)")
 print(f"Total Processing Time: {total_time:.1f}s ({total_time/60:.1f} minutes)")
 
-print(f"\n--- Emotion API Performance ---")
-emotion_series = pd.Series(emotion_times)
-print(f"Average Response Time: {emotion_series.mean():.3f}s")
-print(f"Min Response Time: {emotion_series.min():.3f}s")
-print(f"Max Response Time: {emotion_series.max():.3f}s")
-print(f"Median Response Time: {emotion_series.median():.3f}s")
-print(f"90th Percentile: {emotion_series.quantile(0.90):.3f}s")
-print(f"95th Percentile: {emotion_series.quantile(0.95):.3f}s")
-
-print(f"\n--- Tension API Performance ---")
-tension_series = pd.Series(tension_times)
-print(f"Average Response Time: {tension_series.mean():.3f}s")
-print(f"Min Response Time: {tension_series.min():.3f}s")
-print(f"Max Response Time: {tension_series.max():.3f}s")
-print(f"Median Response Time: {tension_series.median():.3f}s")
-print(f"90th Percentile: {tension_series.quantile(0.90):.3f}s")
-print(f"95th Percentile: {tension_series.quantile(0.95):.3f}s")
+print(f"\n--- Combined API Performance ---")
+api_series = pd.Series(api_times)
+print(f"Average Response Time: {api_series.mean():.3f}s")
+print(f"Min Response Time: {api_series.min():.3f}s")
+print(f"Max Response Time: {api_series.max():.3f}s")
+print(f"Median Response Time: {api_series.median():.3f}s")
+print(f"90th Percentile: {api_series.quantile(0.90):.3f}s")
+print(f"95th Percentile: {api_series.quantile(0.95):.3f}s")
 
 # Emotion Classification Accuracy Analysis
 print(f"\n=== Emotion Classification Accuracy ===")
@@ -346,19 +315,26 @@ if len(emotion_errors) > 0:
     for error_type, count in emotion_errors["predicted_emotion"].value_counts().items():
         print(f"  {error_type}: {count}")
 
+# Efficiency Comparison
+print(f"\n=== Efficiency Improvement ===")
+print(f"API Calls Reduction: 50% (from {len(results)*2} to {len(results)} calls)")
+estimated_dual_time = total_time * 2.2  # Assuming dual calls would take ~2.2x time (including delays)
+time_saved = estimated_dual_time - total_time
+print(f"Estimated Time Saved: {time_saved:.1f}s ({time_saved/60:.1f} minutes)")
+print(f"Processing Efficiency Gain: {((estimated_dual_time - total_time) / estimated_dual_time * 100):.1f}%")
+
 # Visualization
 plt.style.use('default')
 fig, axes = plt.subplots(2, 2, figsize=(15, 12))
 
-# Tension Score Distribution (Main focus - histogram)
+# Tension Score Distribution
 if tension_scores:
-    # Create bins with 0.05 intervals for tension scores
     min_score = min(tension_scores)
     max_score = max(tension_scores)
     bins = np.arange(min_score, max_score + 0.05, 0.05)
     
     axes[0, 0].hist(tension_scores, bins=bins, alpha=0.7, color='skyblue', edgecolor='black')
-    axes[0, 0].set_title('Tension Score Distribution (0.05 intervals)')
+    axes[0, 0].set_title('Tension Score Distribution (Combined API)')
     axes[0, 0].set_xlabel('Tension Score')
     axes[0, 0].set_ylabel('Frequency')
     
@@ -371,10 +347,14 @@ else:
                     transform=axes[0, 0].transAxes, fontsize=12)
     axes[0, 0].set_title('Tension Score Distribution')
 
-# API Response Time Comparison
-axes[0, 1].boxplot([emotion_times, tension_times], labels=['Emotion API', 'Tension API'])
-axes[0, 1].set_title('API Response Time Comparison')
-axes[0, 1].set_ylabel('Response Time (seconds)')
+# API Response Time Distribution
+axes[0, 1].hist(api_times, bins=20, alpha=0.7, color='lightgreen', edgecolor='black')
+axes[0, 1].set_title('Combined API Response Time Distribution')
+axes[0, 1].set_xlabel('Response Time (seconds)')
+axes[0, 1].set_ylabel('Frequency')
+axes[0, 1].axvline(api_series.mean(), color='red', linestyle='--', 
+                   label=f'Mean: {api_series.mean():.3f}s')
+axes[0, 1].legend()
 
 # Emotion Distribution
 if len(valid_emotions) > 0:
@@ -389,7 +369,7 @@ if len(valid_emotions) > 0:
 # Accuracy by Emotion
 if len(valid_emotions) > 0 and 'emotion_stats' in locals():
     axes[1, 1].bar(range(len(emotion_stats)), emotion_stats['accuracy_pct'], color='gold')
-    axes[1, 1].set_title('Accuracy by Emotion')
+    axes[1, 1].set_title('Accuracy by Emotion (Combined API)')
     axes[1, 1].set_xlabel('Emotion')
     axes[1, 1].set_ylabel('Accuracy (%)')
     axes[1, 1].set_xticks(range(len(emotion_stats)))
@@ -397,8 +377,8 @@ if len(valid_emotions) > 0 and 'emotion_stats' in locals():
     axes[1, 1].set_ylim(0, 100)
 
 plt.tight_layout()
-plt.savefig('backend_dual_batch_analysis.png', dpi=300, bbox_inches='tight')
+plt.savefig('combined_single_api_analysis.png', dpi=300, bbox_inches='tight')
 plt.show()
 
-print(f"\nVisualization saved as: backend_dual_batch_analysis.png")
-print("Backend dual API analysis complete!")
+print(f"\nVisualization saved as: combined_single_api_analysis.png")
+print("Combined single API analysis complete!")

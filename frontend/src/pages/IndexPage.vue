@@ -71,7 +71,7 @@
             <strong>情緒：</strong>{{ messages[messages.length - 1].emotion }}
           </p>
           <p class="q-mb-xs">
-            <strong>張力分數：</strong>{{ messages[messages.length - 1].tensionScore }}
+            <strong>Tension：</strong>{{ messages[messages.length - 1].tensionScore }}
           </p>
           <div class="text-caption text-grey-6">
             <p class="q-mb-none">修飾詞：{{ messages[messages.length - 1].modifier }} | 
@@ -87,7 +87,7 @@
     <div v-if="messages.length > 0" class="q-mt-lg" style="width: 550px; height: 550px;">
       <q-card class="full-height">
         <q-card-section class="q-pa-sm">
-          <div class="text-subtitle2 text-center q-mb-xs">情緒分佈 (加權)</div>
+          <div class="text-subtitle2 text-center q-mb-xs">情緒分佈</div>
           <div style="height: 500px; position: relative;">
             <canvas ref="radarChartCanvas"></canvas>
           </div>
@@ -131,11 +131,9 @@ async function evaluateEmotion() {
       return
     }
 
-    // Parse emotion response
     const emotionResponse = res.emotion.response?.trim() || ''
     const emotion = parseEmotionResponse(emotionResponse)
 
-    // Parse tension response
     const tensionResponse = res.tension.response?.trim() || ''
     const tensionData = parseTensionResponse(tensionResponse)
 
@@ -158,11 +156,13 @@ async function evaluateEmotion() {
     messages.value.push(messageData)
     console.log('Messages after push:', messages.value)
     
-    // Update chart after DOM update
-    await nextTick()
-    updateRadarChart()
-    
     text.value = ''
+    
+    await nextTick()
+    setTimeout(() => {
+      updateRadarChart()
+    }, 100)
+    
   } catch (err) {
     console.error('Emotion prediction failed:', err)
     error.value = '網路錯誤，請稍後再試'
@@ -174,13 +174,11 @@ async function evaluateEmotion() {
 function parseEmotionResponse(response) {
   if (!response) return 'ERROR'
   
-  // Look for pattern: 情緒：<emotion>
   const match = response.match(/情緒[：:]\s*([^：:\n\r]+)/)
   if (match) {
     return match[1].trim()
   }
   
-  // Fallback: look for known emotions
   const emotions = ['憤怒', '期待', '厭惡', '恐懼', '喜悅', '悲傷', '驚奇', '信任']
   for (const emotion of emotions) {
     if (response.includes(emotion)) {
@@ -198,7 +196,6 @@ function parseTensionResponse(response) {
   
   const result = {}
   
-  // Parse each component
   const patterns = {
     modifier: /Modifier[：:]\s*(\d+)/,
     idiom: /Idiom[：:]\s*(\d+)/,
@@ -232,13 +229,12 @@ function clearHistory() {
   error.value = ''
 }
 
-// Weighted Emotion Radar Chart
 function getWeightedEmotionScores() {
   const scores = {}
   const emotions = ["憤怒", "期待", "厭惡", "恐懼", "喜悅", "悲傷", "驚奇", "信任"]
 
   emotions.forEach(emotion => scores[emotion] = 0)
-  
+
   messages.value.forEach(msg => {
     if (Object.hasOwn(scores, msg.emotion) && typeof msg.tensionScore === 'number' && !isNaN(msg.tensionScore)) {
       scores[msg.emotion] += msg.tensionScore
@@ -255,73 +251,92 @@ function updateRadarChart() {
   }
 
   const weightedScores = getWeightedEmotionScores()
+  
+  if (Object.keys(weightedScores).length === 0) {
+    console.log('No valid emotion data to display')
+    return
+  }
+  
   const labels = Object.keys(weightedScores)
   const data = Object.values(weightedScores)
   
-  // Calculate max value for better scaling
+  console.log('Chart data:', { labels, data })
+  
   const maxValue = Math.max(...data)
   const suggestedMax = maxValue > 0 ? Math.ceil(maxValue * 1.2) : 1
   
   if (radarChartInstance) {
     radarChartInstance.destroy()
+    radarChartInstance = null
   }
   
-  radarChartInstance = new Chart(radarChartCanvas.value, {
-    type: 'radar',
-    data: {
-      labels: labels,
-      datasets: [{
-        label: '累積張力分數',
-        data: data,  
-        backgroundColor: 'rgba(75, 180, 180, 0.2)',
-        borderColor: 'rgba(75, 180, 180, 1)',
-        borderWidth: 2,
-        pointBackgroundColor: 'rgba(75, 180, 180, 1)',
-        pointBorderColor: '#fff',
-        pointBorderWidth: 2,
-        pointRadius: 5
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          display: true,
-          position: 'bottom'
-        },
-        tooltip: {
-          callbacks: {
-            label: function(context) {
-              const emotion = context.label
-              const score = context.parsed.r.toFixed(3)
-              const count = messages.value.filter(msg => msg.emotion === emotion).length
-              return `${emotion}: ${score} (${count}次)`
+  try {
+    radarChartInstance = new Chart(radarChartCanvas.value, {
+      type: 'radar',
+      data: {
+        labels: labels,
+        datasets: [{
+          data: data,  
+          backgroundColor: 'rgba(75, 180, 180, 0.2)',
+          borderColor: 'rgba(75, 180, 180, 1)',
+          borderWidth: 2,
+          pointBackgroundColor: 'rgba(75, 180, 180, 1)',
+          pointBorderColor: '#fff',
+          pointBorderWidth: 2,
+          pointRadius: 5
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: true,
+            position: 'bottom'
+          },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                const emotion = context.label
+                const score = context.parsed.r.toFixed(3)
+                const count = messages.value.filter(msg => msg.emotion === emotion).length
+                return `${emotion}: ${score} (${count}次)`
+              }
             }
           }
-        }
-      },
-      scales: {
-        r: {
-          beginAtZero: true,
-          suggestedMax: suggestedMax,
-          ticks: {
-            stepSize: suggestedMax / 5,
-            color: '#666',
-            callback: function(value) {
-              return value.toFixed(2)
+        },
+        scales: {
+          r: {
+            beginAtZero: true,
+            suggestedMax: suggestedMax,
+            ticks: {
+              stepSize: suggestedMax / 5,
+              color: '#666',
+              callback: function(value) {
+                return value.toFixed(2)
+              }
+            },
+            pointLabels: {
+              font: {
+                size: 12
+              }
+            },
+            grid: {
+              color: 'rgba(0, 0, 0, 0.1)'
             }
-          },
-          pointLabels: {
-            font: {
-              size: 12
-            }
-          },
-          grid: {
-            color: 'rgba(0, 0, 0, 0.1)'
+          }
+        },
+        animation: {
+          onComplete: function() {
+            console.log('Chart animation completed')
           }
         }
       }
-    }
-  })
-}</script>
+    })
+    
+    console.log('Chart created successfully')
+  } catch (error) {
+    console.error('Error creating chart:', error)
+  }
+}
+</script>
